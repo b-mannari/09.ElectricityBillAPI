@@ -1,57 +1,79 @@
 ﻿using ElectricityBillAPI.Model;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
+using static ElectricityBillAPI.BusinessLogic.AllChargesEnum;
 
 namespace ElectricityBillAPI.BusinessLogic
 {
     public class FCACharges : EnergyCharges
     {
+
+        readonly string fFilePath = Path.Combine(@"C:\TFS\GitHub\09.ElectricityBillAPI\ElectricityBillAPI" + "\\JSON", "FcaSlabCharges.json");
+
+        public bool SetFcaSlabCharges(FCAChargesBilled model)
+        {
+            bool dutySlabAdded = false;
+            var json = System.IO.File.ReadAllText(fFilePath);
+            var fcaSlabList = JsonConvert.DeserializeObject<List<FCAChargesBilled>>(json);
+
+            if (model != null)
+            {
+                fcaSlabList.Add(model);
+                System.IO.File.WriteAllText(fFilePath, JsonConvert.SerializeObject(fcaSlabList, Formatting.Indented));
+                dutySlabAdded = true;
+            }
+            return dutySlabAdded;
+        }
+
+        public FCAChargesBilled GetFcaSlabCharges()
+        {
+            string strResponseContent;
+            using (StreamReader reader = new StreamReader(fFilePath))
+            {
+                strResponseContent = reader.ReadToEnd();
+            }
+            FCAChargesBilled fcaSlab = JsonConvert.DeserializeObject<FCAChargesBilled>(strResponseContent);
+            return fcaSlab;
+        }
+
         public FCAChargesBilled FcaChargesCalculation(int units)
         {
-            double fcaSlabCharges = 0;
-            FCAChargesBilled fcabilled = new FCAChargesBilled();
+            FCAChargesBilled fcaSlabRate = GetFcaSlabCharges();
+            FCAChargesBilled fcaModel = new FCAChargesBilled();
             if (units == 0)
             {
-                fcaSlabCharges = 0;
+                fcaModel.FcaChargesTotal = 0;
             }
             else if (units >= (int)slab1range.min && units <= (int)slab1range.max)
             {
-                fcaSlabCharges = units * fcaSlabrates.slab1;
-                fcabilled.Slab1Charges = units * fcaSlabrates.slab1;
+                fcaModel.Slab1FcaCharges = units * fcaSlabRate.Slab1Rate;
+                fcaModel.FcaChargesTotal = fcaModel.Slab1FcaCharges;
             }
             else if (units >= (int)slab2range.min && units <= (int)slab2range.max)
             {
-                fcaSlabCharges = (50 * fcaSlabrates.slab1)
-                    + ((units - 50) * fcaSlabrates.slab2);
-                fcabilled.Slab1Charges = (50 * fcaSlabrates.slab1);
-                fcabilled.Slab2Charges = ((units - 50) * fcaSlabrates.slab2);
+                fcaModel.Slab1FcaCharges = (50 * fcaSlabRate.Slab1Rate);
+                fcaModel.Slab2FcaCharges = ((units - 50) * fcaSlabRate.Slab2Rate);
+                fcaModel.FcaChargesTotal = (fcaModel.Slab1FcaCharges + fcaModel.Slab2FcaCharges);
             }
             else if (units >= (int)slab3range.min && units <= (int)slab3range.max)
             {
-                fcaSlabCharges = (50 * fcaSlabrates.slab1)
-                    + (100 * fcaSlabrates.slab2)
-                    + ((units - 150) * fcaSlabrates.slab3);
-                fcabilled.Slab1Charges = (50 * fcaSlabrates.slab1);
-                fcabilled.Slab2Charges = (100 * fcaSlabrates.slab2);
-                fcabilled.Slab3Charges = ((units - 150) * fcaSlabrates.slab3);
+                fcaModel.Slab1FcaCharges = (50 * fcaSlabRate.Slab1Rate);
+                fcaModel.Slab2FcaCharges = (100 * fcaSlabRate.Slab2Rate);
+                fcaModel.Slab3FcaCharges = ((units - 150) * fcaSlabRate.Slab3Rate);
+                fcaModel.FcaChargesTotal = (fcaModel.Slab1FcaCharges + fcaModel.Slab2FcaCharges + fcaModel.Slab3FcaCharges);
             }
             else if (units >= (int)slab4range.min)
             {
-                fcaSlabCharges =
-                    (50 * fcaSlabrates.slab1)
-                    + (100 * fcaSlabrates.slab2)
-                    + (150 * fcaSlabrates.slab3)
-                    + (units - 300) * fcaSlabrates.slab4;
-                fcabilled.Slab1Charges = (50 * fcaSlabrates.slab1);
-                fcabilled.Slab2Charges = (100 * fcaSlabrates.slab2);
-                fcabilled.Slab3Charges = (150 * fcaSlabrates.slab3);
-                fcabilled.Slab4Charges = (units - 300) * fcaSlabrates.slab4;
+                fcaModel.Slab1FcaCharges = (50 * fcaSlabRate.Slab1Rate);
+                fcaModel.Slab2FcaCharges = (100 * fcaSlabRate.Slab2Rate);
+                fcaModel.Slab3FcaCharges = (150 * fcaSlabRate.Slab3Rate);
+                fcaModel.Slab4FcaCharges = ((units - 300) * fcaSlabRate.Slab4Rate);
+                fcaModel.FcaChargesTotal = (fcaModel.Slab1FcaCharges + fcaModel.Slab2FcaCharges + fcaModel.Slab3FcaCharges + fcaModel.Slab4FcaCharges);
             }
-            FCACharges = Math.Round((fcaSlabCharges), 3);
-            fcabilled.fcachargestotal = FCACharges;
-            return fcabilled;
+            fcaModel.FcaChargesTotal = Math.Round((fcaModel.FcaChargesTotal), 3);
+            return fcaModel;
         }
     }
 }

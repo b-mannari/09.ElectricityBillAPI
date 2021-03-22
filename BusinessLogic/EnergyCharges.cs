@@ -1,113 +1,84 @@
 ﻿using ElectricityBillAPI.Model;
-using System;
+using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
+using static ElectricityBillAPI.BusinessLogic.AllChargesEnum;
 
 namespace ElectricityBillAPI.BusinessLogic
 {
     public interface IElectricityCharge
     {
-        public double GetSlabRate(int Slab);
-
-        public double GetDutySlabRate(int Slab);
-
+        public EnergyChargesBilled EnergyChargesCalculation(int Units);
     }
+
     public partial class EnergyCharges : IElectricityCharge
     {
-        public double GetDutySlabRate(int Slab)
+        readonly string FilePath = Path.Combine(@"C:\TFS\GitHub\09.ElectricityBillAPI\ElectricityBillAPI" + "\\JSON", "EnrgySlabCharges.json");
+
+        public EnergyChargesBilled GetEnrgySlabCharges()
         {
-            return (Slab == 1) ? 0.09 : 0.12;
+            string strResponseContent;
+            using (StreamReader reader = new StreamReader(FilePath))
+            {
+                strResponseContent = reader.ReadToEnd();
+            }
+            EnergyChargesBilled enrgySlab = JsonConvert.DeserializeObject<EnergyChargesBilled>(strResponseContent);
+            return enrgySlab;
         }
 
-        public double GetSlabRate(int Slab)
+        public bool SetEnrgySlabCharges(EnergyChargesBilled eModel)
         {
-            double returnSlabCharges = 0;
-
-            switch (Slab)
+            bool SlabChargesUpdated = false;
+            var json = File.ReadAllText(FilePath);
+            var enrgySlabList = JsonConvert.DeserializeObject<EnergyChargesBilled>(json);
+            if (eModel != null)
             {
-                case (int)ElectricitySlabs.slab1:
-                    returnSlabCharges = Slabrates.slab1;
-                    break;
+                enrgySlabList.Slab1Rate = eModel.Slab1Rate;
+                enrgySlabList.Slab2Rate = eModel.Slab2Rate;
+                enrgySlabList.Slab3Rate = eModel.Slab3Rate;
+                enrgySlabList.Slab4Rate = eModel.Slab4Rate;
 
-                case (int)ElectricitySlabs.slab2:
-                    returnSlabCharges = Slabrates.slab2;
-                    break;
-
-                case (int)ElectricitySlabs.slab3:
-                    returnSlabCharges = Slabrates.slab3;
-                    break;
-
-                case (int)ElectricitySlabs.slab4:
-                    returnSlabCharges = Slabrates.slab4;
-                    break;
+                File.WriteAllText(FilePath, JsonConvert.SerializeObject(enrgySlabList, Formatting.Indented));
+                SlabChargesUpdated = true;
             }
-
-            return returnSlabCharges;
+            return SlabChargesUpdated;
         }
 
         public EnergyChargesBilled EnergyChargesCalculation(int Units)
         {
-            EnergyChargesBilled ecbilled = new EnergyChargesBilled();
+            EnergyChargesBilled eModel = GetEnrgySlabCharges();
 
             if (Units == 0)
             {
-                totalenergycharges = 0;
-                ecbilled.TotalEnergyCharges = totalenergycharges;
-                ecbilled.Units = Units;
-                ecbilled.Slab = 0;
-
+                eModel.TotalEnergyCharges = 0;
             }
             else if (Units >= (int)slab1range.min && Units <= (int)slab1range.max)
             {
-                totalenergycharges = Units * GetSlabRate((int)ElectricitySlabs.slab1);
-                Slab1Charges = totalenergycharges;
-                ecbilled.Slab1Charges = Slab1Charges;
-                ecbilled.TotalEnergyCharges = totalenergycharges;
-                ecbilled.Units = Units;
-                ecbilled.Slab = 1;
+                eModel.Slab1EnergyCharges = Units * eModel.Slab1Rate;
+                eModel.TotalEnergyCharges = eModel.Slab1EnergyCharges;
             }
             else if (Units >= (int)slab2range.min && Units <= (int)slab2range.max)
             {
-                totalenergycharges = (50 * GetSlabRate((int)ElectricitySlabs.slab1)) + ((Units - 50) * GetSlabRate((int)ElectricitySlabs.slab2));
-                Slab1Charges = (50 * GetSlabRate((int)ElectricitySlabs.slab1));
-                Slab2Charges = ((Units - 50) * GetSlabRate((int)ElectricitySlabs.slab2));
-                ecbilled.Slab1Charges = Slab1Charges;
-                ecbilled.Slab2Charges = Slab2Charges;
-                ecbilled.TotalEnergyCharges = totalenergycharges;
-                ecbilled.Units = Units;
-                ecbilled.Slab = 2;
+                eModel.Slab1EnergyCharges = (50 * eModel.Slab1Rate);
+                eModel.Slab2EnergyCharges = ((Units - 50) * eModel.Slab2Rate);
+                eModel.TotalEnergyCharges = eModel.Slab1EnergyCharges + eModel.Slab2EnergyCharges;
             }
             else if (Units >= (int)slab3range.min && Units <= (int)slab3range.max)
             {
-
-                totalenergycharges = (50 * GetSlabRate((int)ElectricitySlabs.slab1)) + (100 * GetSlabRate((int)ElectricitySlabs.slab2)) + ((Units - 150) * GetSlabRate((int)ElectricitySlabs.slab3));
-                Slab1Charges = (50 * GetSlabRate((int)ElectricitySlabs.slab1));
-                Slab2Charges = (100 * GetSlabRate((int)ElectricitySlabs.slab2));
-                Slab3Charges = ((Units - 150) * GetSlabRate((int)ElectricitySlabs.slab3));
-                ecbilled.Slab1Charges = Slab1Charges;
-                ecbilled.Slab2Charges = Slab2Charges;
-                ecbilled.Slab3Charges = Slab3Charges;
-                ecbilled.TotalEnergyCharges = totalenergycharges;
-                ecbilled.Units = Units;
-                ecbilled.Slab = 3;
+                eModel.Slab1EnergyCharges = (50 * eModel.Slab1Rate);
+                eModel.Slab2EnergyCharges = (100 * eModel.Slab2Rate);
+                eModel.Slab3EnergyCharges = ((Units - 150) * eModel.Slab3Rate);
+                eModel.TotalEnergyCharges = eModel.Slab1EnergyCharges + eModel.Slab2EnergyCharges + eModel.Slab3EnergyCharges;
             }
             else if (Units >= (int)slab4range.min)
             {
-                totalenergycharges = (50 * GetSlabRate((int)ElectricitySlabs.slab1)) + (100 * GetSlabRate((int)ElectricitySlabs.slab2)) + (150 * GetSlabRate((int)ElectricitySlabs.slab3)) + (Units - 300) * GetSlabRate((int)ElectricitySlabs.slab4);
-                Slab1Charges = (50 * GetSlabRate((int)ElectricitySlabs.slab1));
-                Slab2Charges = (100 * GetSlabRate((int)ElectricitySlabs.slab2));
-                Slab3Charges = (150 * GetSlabRate((int)ElectricitySlabs.slab3));
-                Slab4Charges = (Units - 300) * GetSlabRate((int)ElectricitySlabs.slab4);
-                ecbilled.Slab1Charges = Slab1Charges;
-                ecbilled.Slab2Charges = Slab2Charges;
-                ecbilled.Slab3Charges = Slab3Charges;
-                ecbilled.Slab4Charges = Slab4Charges;
-                ecbilled.TotalEnergyCharges = totalenergycharges;
-                ecbilled.Units = Units;
-                ecbilled.Slab = 4;
+                eModel.Slab1EnergyCharges = (50 * eModel.Slab1Rate);
+                eModel.Slab2EnergyCharges = (100 * eModel.Slab2Rate);
+                eModel.Slab3EnergyCharges = (150 * eModel.Slab3Rate);
+                eModel.Slab4EnergyCharges = ((Units - 300) * eModel.Slab4Rate);
+                eModel.TotalEnergyCharges = eModel.Slab1EnergyCharges + eModel.Slab2EnergyCharges + eModel.Slab3EnergyCharges + eModel.Slab4EnergyCharges;
             }
-            return ecbilled;
+            return eModel;
         }
     }
 }

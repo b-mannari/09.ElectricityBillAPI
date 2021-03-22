@@ -1,10 +1,7 @@
 ﻿using ElectricityBillAPI.BusinessLogic;
 using ElectricityBillAPI.Model;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -14,6 +11,7 @@ namespace ElectricityBillAPI.Controllers
     [ApiController]
     public class FCAChargesController : ControllerBase
     {
+        FCACharges fcaCharges = new FCACharges();
         // GET: api/<DutyChargesController>
         [HttpGet]
         public IEnumerable<string> Get()
@@ -25,10 +23,14 @@ namespace ElectricityBillAPI.Controllers
         [HttpGet("/api/FCACharges/Calculation")]
         public FCAChargesBilled Calculation(int units)
         {
-            FCACharges fcaCharges = new FCACharges();
-            FCAChargesBilled fcabilled = new FCAChargesBilled();
-            fcabilled = fcaCharges.FcaChargesCalculation(units);
-            return fcabilled;
+            FCAChargesBilled fcaModel = fcaCharges.FcaChargesCalculation(units);
+            return fcaModel;
+        }
+
+        [HttpPost("/api/FCACharges/SetCharges")]
+        public bool SetCharges([FromBody] FCAChargesBilled fModel)
+        {
+            return fcaCharges.SetFcaSlabCharges(fModel);
         }
     }
 }
